@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cultural Heritage Chatbot VQA</title>
+    <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+    
+    <div class="slideshow-container">
+        <div class="slide active">
+            <img src="https://images.unsplash.com/photo-1564399579883-451a5d44ec08" alt="Colosseo">
+        </div>
+        <div class="slide">
+            <img src="https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b" alt="David di Michelangelo">
+        </div>
+        <div class="slide">
+            <img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5" alt="Venezia">
+        </div>
+        <div class="slide">
+            <img src="https://images.unsplash.com/photo-1529260830199-42c24126f198" alt="Arte Classica">
+        </div>
+    </div>
+
+    <div class="white-overlay"></div>
+
+    <header class="chat-header">
+        <button class="back-btn" id="backBtn">← Indietro</button>
+        <h2 class="header-title">Cultural Heritage Chatbot VQA</h2>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+    </header>
+
+    <div class="chat-container">
+        <div class="artistic-frame">
+            <span class="corner-top-left"></span>
+            <span class="corner-top-right"></span>
+            <span class="corner-bottom-left"></span>
+            <span class="corner-bottom-right"></span>
+
+            <div class="cultural-card" id="culturalCard">
+                <div class="card-image">
+                    <img id="recognizedImage" src="" alt="Bene culturale">
+                </div>
+                <div class="card-info">
+                    <h3 class="card-title" id="cardTitle">Colosseo</h3>
+                    <div class="card-details">
+                        <p><strong>Epoca:</strong> <span id="cardEpoch">80 d.C.</span></p>
+                        <p><strong>Stile:</strong> <span id="cardStyle">Architettura Romana</span></p>
+                        <p><strong>Località:</strong> <span id="cardLocation">Roma, Italia</span></p>
+                        <p><strong>Autore:</strong> <span id="cardAuthor">Imperatori Vespasiano e Tito</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+
+                <div class="message bot-message">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <p>Ho riconosciuto il <strong>Colosseo</strong>! È uno dei monumenti più iconici di Roma. Cosa vorresti sapere?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                <div class="typing-avatar">🤖</div>
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+
+            <!-- INPUT CHAT -->
+            <div class="chat-input-container">
+                <input type="file" id="chatFileInput" accept="image/*" hidden>
+                <button class="attach-btn" id="attachBtn" title="Carica immagine">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                    </svg>
+                </button>
+                <input type="text" class="chat-input" id="chatInput" placeholder="Scrivi la tua domanda o carica un'immagine..." autocomplete="off">
+                <button class="send-btn" id="sendBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- PREVIEW IMMAGINE -->
+            <div class="chat-image-preview" id="chatImagePreview" style="display: none;">
+                <img id="chatPreviewImg" src="" alt="Preview">
+                <button class="chat-remove-btn" id="chatRemoveBtn">✕</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="chat.js"></script>
+</body>
+</html>

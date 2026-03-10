@@ -1,0 +1,235 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* SLIDESHOW */
+.slideshow-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.slide {
+    display: none;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.slide.active {
+    display: block;
+    animation: fadeIn 1.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* OVERLAY */
+.white-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.75);
+    z-index: 2;
+}
+
+/* CONTAINER */
+.main-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 90%;
+    max-width: 420px;
+}
+
+/* CORNICE */
+.artistic-frame {
+    background: linear-gradient(145deg, #f5e6d3, #ffffff);
+    padding: 50px 40px;
+    border-radius: 8px;
+    position: relative;
+    border: 18px solid #3d2817;
+    box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.35),
+        inset 0 0 0 2px #5c3d2e,
+        inset 0 0 0 8px #d4af37,
+        inset 0 0 0 10px #f4e4c1,
+        inset 0 0 0 14px #d4af37,
+        inset -2px -2px 8px rgba(255, 215, 0, 0.3),
+        inset 2px 2px 8px rgba(255, 255, 255, 0.4);
+}
+
+.corner-top-left {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #d4af37;
+    border-right: none;
+    border-bottom: none;
+}
+
+.corner-top-right {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #d4af37;
+    border-left: none;
+    border-bottom: none;
+}
+
+.corner-bottom-left {
+    position: absolute;
+    bottom: -10px;
+    left: -10px;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #d4af37;
+    border-right: none;
+    border-top: none;
+}
+
+.corner-bottom-right {
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #d4af37;
+    border-left: none;
+    border-top: none;
+}
+
+.title {
+    text-align: center;
+    color: #654321;
+    font-size: 28px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.subtitle {
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 35px;
+}
+
+/* FORM */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    color: #654321;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="password"] {
+    width: 100%;
+    padding: 12px 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus {
+    border-color: #d4af37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* BOTTONE */
+.submit-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, #8B4513, #654321);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 20px rgba(139, 69, 19, 0.3);
+}
+
+.submit-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(139, 69, 19, 0.4);
+}
+
+/* ERRORE */
+.error-msg {
+    color: red;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 12px;
+    min-height: 18px;
+}
+
+/* BACK LINK */
+.back-link {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    color: #999;
+    font-size: 13px;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.back-link:hover {
+    color: #654321;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .main-container {
+        width: 95%;
+    }
+
+    .artistic-frame {
+        padding: 30px 20px;
+    }
+
+    .title {
+        font-size: 22px;
+    }
+}

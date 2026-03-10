@@ -17,10 +17,11 @@ function nextSlide() {
 
 setInterval(nextSlide, 10000); //intervallo rotazione slides
 
-// DRAG AND DROP
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const browseBtn = document.getElementById('browseBtn');
+const cameraBtn = document.getElementById('cameraBtn');
+const cameraInput = document.getElementById('cameraInput');
 const previewContainer = document.getElementById('previewContainer');
 const previewImage = document.getElementById('previewImage');
 const removeBtn = document.getElementById('removeBtn');
@@ -94,6 +95,17 @@ function handleFile(file) {
     reader.readAsDataURL(file);
 }
 
+// gestione fotocamera
+cameraBtn.addEventListener('click', () => {
+    cameraInput.click();
+});
+
+cameraInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+});
+
 // rimuovi immagine
 removeBtn.addEventListener('click', () => {
     uploadedFile = null;
@@ -115,26 +127,20 @@ submitBtn.addEventListener('click', async () => {
         return;
     }
     
-    // gestione 2 casi: immagine o testo
     if (uploadedFile) {
-        // CASO 1: immagine
+        sessionStorage.setItem('inputType', 'image');
+        if (textValue) sessionStorage.setItem('userMessage', textValue);
+        // salva il file temporaneamente come base64
         const reader = new FileReader();
         reader.onload = (e) => {
-            localStorage.setItem('uploadedImage', e.target.result);
-            localStorage.setItem('inputType', 'image'); // flag per distinguere
-            
-            // se contiene anche testo va salvato
-            if (textValue) {
-                localStorage.setItem('userMessage', textValue);
-            }
-            
+            sessionStorage.setItem('uploadedImage', e.target.result);
             window.location.href = 'chat.html';
         };
         reader.readAsDataURL(uploadedFile);
     } else {
-        // CASO 2: solo testo
-        localStorage.setItem('userMessage', textValue);
-        localStorage.setItem('inputType', 'text'); // flag per distinguere
+        sessionStorage.setItem('inputType', 'text');
+        sessionStorage.setItem('userMessage', textValue);
+        console.log('Salvato:', sessionStorage.getItem('inputType'), sessionStorage.getItem('userMessage'));
         window.location.href = 'chat.html';
     }
 });
@@ -143,7 +149,5 @@ submitBtn.addEventListener('click', async () => {
 const loginBtn = document.getElementById('loginBtn');
 
 loginBtn.addEventListener('click', () => {
-    //TODO implementa login
-    alert('Funzionalità login in sviluppo!');
-    //window.location.href = '/login';
+    window.location.href = 'login.html';
 });

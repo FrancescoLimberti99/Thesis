@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pannello Curatore</title>
+    <link rel="stylesheet" href="curator.css">
+</head>
+<body>
+    <div class="slideshow-container">
+        <div class="slide active">
+            <img src="images/colosseum.png" alt="Colosseo">
+        </div>
+        <div class="slide">
+            <img src="images/pisa.png" alt="Pisa">
+        </div>
+        <div class="slide">
+            <img src="images/venice.png" alt="Venezia">
+        </div>
+        <div class="slide">
+            <img src="images/florence.png" alt="Firenze">
+        </div>
+    </div>
+
+    <div class="white-overlay"></div>
+
+    <header class="chat-header">
+        <button class="back-btn" onclick="window.location.href='index.html'">← Indietro</button>
+        <h2 class="header-title">Pannello Curatore</h2>
+        <button class="logout-btn" id="logoutBtn">Esci</button>
+    </header>
+
+    <div class="curator-container">
+        <div class="artistic-frame">
+            <span class="corner-top-left"></span>
+            <span class="corner-top-right"></span>
+            <span class="corner-bottom-left"></span>
+            <span class="corner-bottom-right"></span>
+
+            <div class="panel-grid">
+
+                <!-- COLONNA SINISTRA: aggiungi opera -->
+                <div class="panel-section">
+                    <h2 class="section-title">Aggiungi Opera</h2>
+
+                    <div class="form-group">
+                        <label for="artworkImages">Immagine/i</label>
+                        <input type="file" id="artworkImages" accept="image/*" multiple>
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkName">Nome</label>
+                        <input type="text" id="artworkName" placeholder="es. Mona Lisa">
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkAuthor">Autore</label>
+                        <input type="text" id="artworkAuthor" placeholder="es. Leonardo da Vinci">
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkPeriod">Epoca</label>
+                        <input type="text" id="artworkPeriod" placeholder="es. Rinascimento">
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkLocation">Locazione</label>
+                        <input type="text" id="artworkLocation" placeholder="es. Louvre, Parigi">
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkStyle">Stile</label>
+                        <input type="text" id="artworkStyle" placeholder="es. Olio su tela">
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkContext">Contesto</label>
+                        <textarea id="artworkContext" placeholder="Descrivi l'opera..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="artworkAliases">Alias / Tag</label>
+                        <input type="text" id="artworkAliases" placeholder="es. mona lisa, la gioconda, leonardo">
+                        <small>Separati da virgola</small>
+                    </div>
+
+                    <button class="submit-btn" id="addArtworkBtn">Aggiungi Opera</button>
+                    <p class="feedback-msg" id="feedbackMsg"></p>
+                </div>
+
+                <!-- COLONNA DESTRA: lista opere -->
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Opere</h2>
+                        <a href="history.html" class="history-link">Guarda Storia Conversazioni</a>
+                    </div>
+                    <div class="artwork-list" id="artworkList">
+                        <p class="loading-msg">Caricamento Opere...</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MODIFICA OPERA -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+            <h3 class="section-title">Modifica Opera</h3>
+            <div class="form-group">
+                <label>Immagini attuali</label>
+                <div id="editCurrentImages" class="current-images"></div>
+                <label>Nuove immagini (sostituisce tutte le attuali)</label>
+                <input type="file" id="editImages" accept="image/*" multiple>
+            </div>
+            <div class="form-group">
+                <label>Nome</label>
+                <input type="text" id="editName">
+            </div>
+            <div class="form-group">
+                <label>Autore</label>
+                <input type="text" id="editAuthor">
+            </div>
+            <div class="form-group">
+                <label>Epoca</label>
+                <input type="text" id="editPeriod">
+            </div>
+            <div class="form-group">
+                <label>Locazione</label>
+                <input type="text" id="editLocation">
+            </div>
+            <div class="form-group">
+                <label>Stile</label>
+                <input type="text" id="editStyle">
+            </div>
+            <div class="form-group">
+                <label>Contesto</label>
+                <textarea id="editContext"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Alias / Tag</label>
+                <input type="text" id="editAliases">
+                <small>Separati da virgola</small>
+            </div>
+            <div class="modal-buttons">
+                <button class="submit-btn" id="saveEditBtn">Salva Modifiche</button>
+                <button class="delete-btn" id="cancelEditBtn">Annulla</button>
+            </div>
+            <p class="feedback-msg" id="editFeedbackMsg"></p>
+        </div>
+    </div>
+
+    <script src="curator.js"></script>
+</body>
+</html>

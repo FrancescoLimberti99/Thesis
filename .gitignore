@@ -1,0 +1,19 @@
+# virtual env
+.venv/
+venv/
+
+# environment variables
+.env
+.env.*
+
+# python
+__pycache__/
+*.pyc
+
+# vscode
+.vscode/
+
+# django
+db.sqlite3
+media/
+storage/vector_db.pkl

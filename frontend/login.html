@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accesso Curatore</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <div class="slideshow-container">
+        <div class="slide active">
+            <img src="images/colosseum.png" alt="Colosseo">
+        </div>
+        <div class="slide">
+            <img src="images/pisa.png" alt="Pisa">
+        </div>
+        <div class="slide">
+            <img src="images/venice.png" alt="Venezia">
+        </div>
+        <div class="slide">
+            <img src="images/florence.png" alt="Firenze">
+        </div>
+    </div>
+
+    <div class="white-overlay"></div>
+
+    <div class="main-container">
+        <div class="artistic-frame">
+            <span class="corner-top-left"></span>
+            <span class="corner-top-right"></span>
+            <span class="corner-bottom-left"></span>
+            <span class="corner-bottom-right"></span>
+
+            <h1 class="title">Accesso Curatore</h1>
+            <p class="subtitle">Accedi al panello del curatore per gestire le opere</p>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Inserisci l'username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Inserisci la password">
+            </div>
+
+            <button class="submit-btn" id="loginBtn">Accedi</button>
+            <p class="error-msg" id="errorMsg"></p>
+
+            <a class="back-link" href="index.html">Torna alla home</a>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>

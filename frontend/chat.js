@@ -1,115 +1,67 @@
-// SLIDESHOW AUTOMATICO
+const API_BASE = 'http://localhost:8000/api';
+
+// SLIDESHOW
 let currentSlide = 0;
 const slides = document.querySelectorAll('.slide');
 
-function showSlide(index) {
-    slides.forEach(slide => slide.classList.remove('active'));
-    slides[index].classList.add('active');
-}
-
 function nextSlide() {
     currentSlide = (currentSlide + 1) % slides.length;
-    showSlide(currentSlide);
+    slides.forEach(slide => slide.classList.remove('active'));
+    slides[currentSlide].classList.add('active');
 }
 
 setInterval(nextSlide, 10000);
 
-// GESTIONE DATI DA HOMEPAGE
-window.addEventListener('DOMContentLoaded', () => {
-    const uploadedImageData = localStorage.getItem('uploadedImage');
-    const userMessage = localStorage.getItem('userMessage');
-    const inputType = localStorage.getItem('inputType'); // 'image' o 'text'
-    
-    const culturalCard = document.getElementById('culturalCard');
-    const chatMessages = document.getElementById('chatMessages');
-    
-    // GESTIONE BIFORCAZIONE: immagine vs testo
-    if (inputType === 'image') {
-        // CASO 1: immagine
-        
-        // card del bene culturale
-        culturalCard.style.display = 'flex';
-        
-        // mostra l'immagine caricata
-        if (uploadedImageData) {
-            document.getElementById('recognizedImage').src = uploadedImageData;
-        }
-        
-        // messaggio iniziale del bot sul riconoscimento
-        chatMessages.innerHTML = `
-            <div class="message bot-message">
-                <div class="message-avatar">🤖</div>
-                <div class="message-content">
-                    <p>Ho riconosciuto il <strong>Colosseo</strong>! È uno dei monumenti più iconici di Roma. Cosa vorresti sapere?</p>
-                </div>
-            </div>
-        `;
-        
-        if (userMessage) {
-            setTimeout(() => {
-                addUserMessage(userMessage);
-                showTypingIndicator();
-                setTimeout(() => {
-                    hideTypingIndicator();
-                    simulateBotResponse(userMessage, 'image');
-                }, 1500);
-            }, 500);
-        }
-        
-    } else if (inputType === 'text') {
-        // CASO 2: solo testo
-        
-        // nascondo card del bene culturale
-        culturalCard.style.display = 'none';
-        
-        // messaggio di benvenuto generico
-        chatMessages.innerHTML = `
-            <div class="message bot-message">
-                <div class="message-avatar">🤖</div>
-                <div class="message-content">
-                    <p>Ciao! Sono qui per rispondere alle tue domande sui beni culturali. Come posso aiutarti?</p>
-                </div>
-            </div>
-        `;
-        
-        if (userMessage) {
-            setTimeout(() => {
-                addUserMessage(userMessage);
-                showTypingIndicator();
-                setTimeout(() => {
-                    hideTypingIndicator();
-                    simulateBotResponse(userMessage, 'text');
-                }, 1500);
-            }, 500);
-        }
-    }
-    
-    // pulisci localStorage
-    localStorage.removeItem('uploadedImage');
-    localStorage.removeItem('userMessage');
-    localStorage.removeItem('inputType');
-});
-
-// FUNZIONALITÀ CHAT
+// ELEMENTI UI
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const typingIndicator = document.getElementById('typingIndicator');
-
-// ===== GESTIONE UPLOAD IMMAGINE IN CHAT =====
-const chatFileInput = document.getElementById('chatFileInput');
+const culturalCard = document.getElementById('culturalCard');
 const attachBtn = document.getElementById('attachBtn');
+const chatFileInput = document.getElementById('chatFileInput');
 const chatImagePreview = document.getElementById('chatImagePreview');
 const chatPreviewImg = document.getElementById('chatPreviewImg');
 const chatRemoveBtn = document.getElementById('chatRemoveBtn');
-let chatUploadedFile = null;
 
-// click sul bottone allega
-attachBtn.addEventListener('click', () => {
-    chatFileInput.click();
+let chatUploadedFile = null;
+let pendingImageFile = null;
+let pendingText = null;
+let pendingInputType = null;
+
+// AVVIO — primo messaggio da index.html tramite sessionStorage
+window.addEventListener('DOMContentLoaded', () => {
+    const inputType = sessionStorage.getItem('inputType');
+    const userMessage = sessionStorage.getItem('userMessage');
+    const uploadedImage = sessionStorage.getItem('uploadedImage');
+
+    console.log('inputType:', sessionStorage.getItem('inputType'));
+    console.log('userMessage:', sessionStorage.getItem('userMessage'));
+    sessionStorage.clear();
+
+    if (inputType === 'image' && uploadedImage) {
+        culturalCard.style.display = 'none';
+        // converti base64 in file e manda al backend
+        fetch(uploadedImage)
+            .then(r => r.blob())
+            .then(blob => {
+                const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+                addUserMessageWithImage(uploadedImage, userMessage || '');
+                sendToBackend(userMessage || '', file);
+            });
+    } else if (inputType === 'text' && userMessage) {
+        culturalCard.style.display = 'none';
+        addUserMessage(userMessage);
+        sendToBackend(userMessage, null);
+    } else {
+        culturalCard.style.display = 'none';
+        addBotMessage('Ciao! Puoi scrivermi il nome di un\'opera o caricare una foto per iniziare.');
+    }
 });
 
-// gestione file selezionato
+// UPLOAD IMMAGINE IN CHAT
+attachBtn.addEventListener('click', () => chatFileInput.click());
+
 chatFileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
         handleChatFile(e.target.files[0]);
@@ -121,10 +73,7 @@ function handleChatFile(file) {
         alert('Per favore carica solo immagini!');
         return;
     }
-    
     chatUploadedFile = file;
-    
-    // preview
     const reader = new FileReader();
     reader.onload = (e) => {
         chatPreviewImg.src = e.target.result;
@@ -133,7 +82,6 @@ function handleChatFile(file) {
     reader.readAsDataURL(file);
 }
 
-// rimuovi immagine dalla preview
 chatRemoveBtn.addEventListener('click', () => {
     chatUploadedFile = null;
     chatFileInput.value = '';
@@ -141,7 +89,7 @@ chatRemoveBtn.addEventListener('click', () => {
     chatImagePreview.style.display = 'none';
 });
 
-// invia messaggio con ENTER
+// INVIO MESSAGGIO
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -149,136 +97,144 @@ chatInput.addEventListener('keypress', (e) => {
     }
 });
 
-// invia messaggio con click
 sendBtn.addEventListener('click', sendMessage);
 
 function sendMessage() {
     const message = chatInput.value.trim();
-    
     if (!message && !chatUploadedFile) return;
-    
-    // immagine
+
     if (chatUploadedFile) {
-        sendImageMessage(chatUploadedFile, message);
-        
-        // pulisci
+        const file = chatUploadedFile;
+        const text = message;
+
+        // mostra messaggio utente con immagine
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            addUserMessageWithImage(e.target.result, text);
+        };
+        reader.readAsDataURL(file);
+
         chatUploadedFile = null;
         chatFileInput.value = '';
         chatImagePreview.style.display = 'none';
         chatInput.value = '';
+
+        sendToBackend(text, file);
     } else {
-        // solo testo
         addUserMessage(message);
         chatInput.value = '';
-        
-        showTypingIndicator();
-        setTimeout(() => {
-            hideTypingIndicator();
-            const culturalCard = document.getElementById('culturalCard');
-            const context = culturalCard.style.display === 'none' ? 'text' : 'image';
-            simulateBotResponse(message, context);
-        }, 1500);
+        sendToBackend(message, null);
     }
 }
 
-function sendImageMessage(file, text = '') {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const imageData = e.target.result;
-        
-        // messaggio utente con immagine
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message user-message';
-        messageDiv.innerHTML = `
-            <div class="message-avatar">👤</div>
-            <div class="message-content">
-                <img src="${imageData}" style="max-width: 200px; border-radius: 8px; margin-bottom: 8px;">
-                ${text ? `<p>${escapeHtml(text)}</p>` : ''}
-            </div>
-        `;
-        
-        chatMessages.appendChild(messageDiv);
-        scrollToBottom();
-        
-        // simula riconoscimento immagine
-        showTypingIndicator();
-        setTimeout(() => {
-            hideTypingIndicator();
-            
-            // aggiorna la card con il nuovo bene riconosciuto
-            updateCulturalCard(imageData);
-            
-            // risposta bot sul riconoscimento
-            const botResponse = text 
-                ? `Ho riconosciuto un nuovo bene culturale nell'immagine! ${text ? 'Riguardo alla tua domanda: ' + getResponseForQuestion(text) : ''}`
-                : 'Ho riconosciuto un nuovo bene culturale nell\'immagine! Cosa vorresti sapere?';
-            
-            addBotMessage(botResponse);
-            
-        }, 2000);
-    };
-    reader.readAsDataURL(file);
+// CHIAMATA BACKEND
+async function sendToBackend(text, imageFile) {
+    showTypingIndicator();
+
+    const formData = new FormData();
+    if (text) formData.append('text', text);
+    if (imageFile) formData.append('image', imageFile);
+
+    try {
+        const response = await fetch(`${API_BASE}/chat/`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        hideTypingIndicator();
+
+        if (response.ok) {
+            // aggiorna la card con i dati dell'opera riconosciuta
+            if (data.artwork) {
+                updateCulturalCard(data.artwork, imageFile);
+            }
+            addBotMessage(data.response);
+        } else {
+            addBotMessage(data.response || 'Si è verificato un errore. Riprova.');
+        }
+    } catch (error) {
+        hideTypingIndicator();
+        addBotMessage('Errore di connessione. Il server è avviato?');
+    }
 }
 
-function updateCulturalCard(imageData, culturalGood = null) {
-    const culturalCard = document.getElementById('culturalCard');
-    
-    // mostra card se era nascosta
+// AGGIORNA CARD OPERA
+async function updateCulturalCard(artworkName, imageFile) {
     culturalCard.style.display = 'flex';
-    
-    // aggiorna immagine
-    document.getElementById('recognizedImage').src = imageData;
-    
-    // se ci sono dati del bene, aggiornali (altrimenti usa dati di esempio)
-    if (culturalGood) {
-        document.getElementById('cardTitle').textContent = culturalGood.name;
-        document.getElementById('cardEpoch').textContent = culturalGood.epoch;
-        document.getElementById('cardStyle').textContent = culturalGood.style;
-        document.getElementById('cardLocation').textContent = culturalGood.location;
-        document.getElementById('cardAuthor').textContent = culturalGood.author;
-    } else {
-        // simulazione - da sostituire con dati reali dal backend
-        document.getElementById('cardTitle').textContent = 'Bene Culturale Riconosciuto';
-        document.getElementById('cardEpoch').textContent = 'In elaborazione...';
-        document.getElementById('cardStyle').textContent = 'In elaborazione...';
-        document.getElementById('cardLocation').textContent = 'Italia';
-        document.getElementById('cardAuthor').textContent = 'Sconosciuto';
+
+    document.getElementById('cardTitle').textContent = artworkName;
+    document.getElementById('cardEpoch').textContent = 'Caricamento...';
+    document.getElementById('cardStyle').textContent = 'Caricamento...';
+    document.getElementById('cardLocation').textContent = 'Caricamento...';
+    document.getElementById('cardAuthor').textContent = 'Caricamento...';
+
+    if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('recognizedImage').src = e.target.result;
+        };
+        reader.readAsDataURL(imageFile);
+    }
+
+    // recupera dettagli opera dal backend
+    try {
+        const response = await fetch(`${API_BASE}/artworks/`, {
+            credentials: 'include'
+        });
+        const artworks = await response.json();
+        const artwork = artworks.find(a => a.name === artworkName);
+
+        if (artwork) {
+            document.getElementById('cardTitle').textContent = artwork.name;
+            document.getElementById('cardEpoch').textContent = artwork.period || '—';
+            document.getElementById('cardStyle').textContent = artwork.style || '—';
+            document.getElementById('cardLocation').textContent = artwork.location || '—';
+            document.getElementById('cardAuthor').textContent = artwork.author || '—';
+
+            if (!imageFile && artwork.images && artwork.images.length > 0) {
+                document.getElementById('recognizedImage').src = 'http://localhost:8000' + artwork.images[0].image;
+            }
+        }
+    } catch (error) {
+        console.error('Errore recupero dettagli opera:', error);
     }
 }
 
-function getResponseForQuestion(question) {
-    // risposta semplice alla domanda (da migliorare con backend)
-    const lowerQ = question.toLowerCase();
-    if (lowerQ.includes('quando')) return 'La datazione verrà determinata dall\'analisi.';
-    if (lowerQ.includes('dove')) return 'Il bene si trova in Italia, verificherò la località esatta.';
-    return 'Sto analizzando l\'immagine per rispondere alla tua domanda.';
+// MESSAGGI
+function addUserMessage(text) {
+    const div = document.createElement('div');
+    div.className = 'message user-message';
+    div.innerHTML = `
+        <div class="message-avatar">👤</div>
+        <div class="message-content"><p>${escapeHtml(text)}</p></div>
+    `;
+    chatMessages.appendChild(div);
+    scrollToBottom();
 }
 
-function addUserMessage(text) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message user-message';
-    messageDiv.innerHTML = `
+function addUserMessageWithImage(imageData, text) {
+    const div = document.createElement('div');
+    div.className = 'message user-message';
+    div.innerHTML = `
         <div class="message-avatar">👤</div>
         <div class="message-content">
-            <p>${escapeHtml(text)}</p>
+            <img src="${imageData}" style="max-width:200px;border-radius:8px;margin-bottom:8px;">
+            ${text ? `<p>${escapeHtml(text)}</p>` : ''}
         </div>
     `;
-    
-    chatMessages.appendChild(messageDiv);
+    chatMessages.appendChild(div);
     scrollToBottom();
 }
 
 function addBotMessage(text) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message bot-message';
-    messageDiv.innerHTML = `
+    const div = document.createElement('div');
+    div.className = 'message bot-message';
+    div.innerHTML = `
         <div class="message-avatar">🤖</div>
-        <div class="message-content">
-            <p>${text}</p>
-        </div>
+        <div class="message-content"><p>${text}</p></div>
     `;
-    
-    chatMessages.appendChild(messageDiv);
+    chatMessages.appendChild(div);
     scrollToBottom();
 }
 
@@ -295,74 +251,21 @@ function scrollToBottom() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Escape HTML per sicurezza
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-// SIMULAZIONE RISPOSTA BOT
-function simulateBotResponse(userMessage, context = 'image') {
-    let response;
-    
-    if (context === 'image') {
-        // risposte specifiche sul bene riconosciuto (Colosseo)
-        const imageResponses = {
-            'quando': 'Il Colosseo fu costruito tra il 70 e l\'80 d.C. sotto gli imperatori Vespasiano e Tito.',
-            'chi': 'Il Colosseo fu commissionato dagli imperatori della dinastia Flavia: Vespasiano e suo figlio Tito.',
-            'dove': 'Il Colosseo si trova nel centro di Roma, vicino al Foro Romano e al Palatino.',
-            'perché': 'Fu costruito come anfiteatro per spettacoli pubblici, combattimenti di gladiatori e cacce di animali.',
-            'dimensioni': 'Il Colosseo è lungo 189 metri, largo 156 metri e alto 48 metri. Poteva contenere circa 50.000 spettatori.',
-            'storia': 'Il Colosseo è il più grande anfiteatro del mondo romano. Nel Medioevo fu utilizzato come cava di materiali, ma rimane uno dei simboli di Roma.',
-        };
-        
-        response = 'Questa è un\'informazione interessante sul Colosseo! Posso dirti di più sulla sua storia, architettura o importanza culturale.';
-        
-        const lowerMessage = userMessage.toLowerCase();
-        for (const [key, value] of Object.entries(imageResponses)) {
-            if (lowerMessage.includes(key)) {
-                response = value;
-                break;
-            }
-        }
-        
-    } else {
-        // risposte generiche per domande testuali
-        const textResponses = {
-            'colosseo': 'Il Colosseo è uno dei monumenti più famosi al mondo! Vuoi sapere qualcosa di specifico? Ad esempio quando fu costruito, chi lo commissionò, o le sue dimensioni?',
-            'roma': 'Roma è una città ricchissima di beni culturali! Ci sono il Colosseo, il Pantheon, la Fontana di Trevi, il Foro Romano e tantissimi altri monumenti. Quale ti interessa?',
-            'rinascimento': 'Il Rinascimento italiano ha prodotto capolavori straordinari! Pensiamo al David di Michelangelo, alla Gioconda di Leonardo, o alla Cupola del Brunelleschi. Su quale vorresti saperne di più?',
-            'museo': 'In Italia ci sono musei meravigliosi come gli Uffizi a Firenze, i Musei Vaticani a Roma, la Galleria Borghese e molti altri. Quale ti interessa?',
-        };
-        
-        response = 'Interessante domanda! Posso aiutarti con informazioni su monumenti, opere d\'arte, musei e tanto altro. Vuoi essere più specifico?';
-        
-        const lowerMessage = userMessage.toLowerCase();
-        for (const [key, value] of Object.entries(textResponses)) {
-            if (lowerMessage.includes(key)) {
-                response = value;
-                break;
-            }
-        }
-    }
-    
-    addBotMessage(response);
-
-}
-
-// PULSANTI NAVIGAZIONE
-const backBtn = document.getElementById('backBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-
-backBtn.addEventListener('click', () => {
-    
+// NAVIGAZIONE
+document.getElementById('backBtn').addEventListener('click', () => {
     window.location.href = 'index.html';
 });
 
-logoutBtn.addEventListener('click', () => {
-    // logout (implementare logica)
-    if (confirm('Vuoi davvero uscire?')) {
-        window.location.href = 'index.html';
-    }
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch(`${API_BASE}/logout/`, {
+        method: 'POST',
+        credentials: 'include'
+    });
+    window.location.href = 'index.html';
 });

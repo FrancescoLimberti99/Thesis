@@ -9,22 +9,22 @@
 <body>
     <div class="slideshow-container">
         <div class="slide active">
-            <img src="https://images.unsplash.com/photo-1564399579883-451a5d44ec08" alt="Colosseo">
+            <img src="images/colosseum.png" alt="Colosseo">
         </div>
         <div class="slide">
-            <img src="https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b" alt="David di Michelangelo">
+            <img src="images/pisa.png" alt="Pisa">
         </div>
         <div class="slide">
-            <img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5" alt="Venezia">
+            <img src="images/venice.png" alt="Venezia">
         </div>
         <div class="slide">
-            <img src="https://images.unsplash.com/photo-1529260830199-42c24126f198" alt="Arte Classica">
+            <img src="images/florence.png" alt="Firenze">
         </div>
     </div>
 
     <div class="white-overlay"></div>
 
-    <button class="login-btn" id="loginBtn">LOGIN</button>
+    <button class="login-btn" id="loginBtn" onclick="window.location.href='login.html'">ACCEDI COME CURATORE</button>
 
     <div class="main-container">
         <div class="artistic-frame">
@@ -44,7 +44,11 @@
                     <p class="drag-text">Trascina un'immagine qui</p>
                     <p class="or-text">oppure</p>
                     <input type="file" id="fileInput" accept="image/*" hidden>
-                    <button class="browse-btn" id="browseBtn">Sfoglia File</button>
+                    <div class="btn-group">
+                        <button class="browse-btn" id="browseBtn">Sfoglia File</button>
+                        <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+                        <button class="browse-btn" id="cameraBtn">Scatta Foto</button>
+                    </div>
                     <p class="text-input-label">oppure scrivi una domanda:</p>
                     <input type="text" class="text-input" placeholder="Es: Dimmi qualcosa sul Colosseo..." id="textInput">
                 </div>

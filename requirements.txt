@@ -1,0 +1,10 @@
+django
+djangorestframework
+django-cors-headers
+python-dotenv
+pillow
+requests
+numpy
+torch
+transformers
+pandas

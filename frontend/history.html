@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storia Conversazioni</title>
+    <link rel="stylesheet" href="history.css">
+</head>
+<body>
+    <div class="slideshow-container">
+        <div class="slide active">
+            <img src="images/colosseum.png" alt="Colosseo">
+        </div>
+        <div class="slide">
+            <img src="images/pisa.png" alt="Pisa">
+        </div>
+        <div class="slide">
+            <img src="images/venice.png" alt="Venezia">
+        </div>
+        <div class="slide">
+            <img src="images/florence.png" alt="Firenze">
+        </div>
+    </div>
+
+    <div class="white-overlay"></div>
+
+    <header class="chat-header">
+        <button class="back-btn" onclick="window.location.href='curator.html'">← Indietro</button>
+        <h2 class="header-title">Storia Conversazioni</h2>
+        <button class="logout-btn" id="logoutBtn">Esci</button>
+    </header>
+
+    <div class="history-container">
+        <div class="artistic-frame">
+            <span class="corner-top-left"></span>
+            <span class="corner-top-right"></span>
+            <span class="corner-bottom-left"></span>
+            <span class="corner-bottom-right"></span>
+
+            <div class="filters">
+                <input type="text" id="searchInput" placeholder="Cerca dall'opera...">
+                <select id="sortSelect">
+                    <option value="newest">Dalla più recente</option>
+                    <option value="oldest">Dalla meno recente</option>
+                </select>
+            </div>
+
+            <div class="conversation-list" id="conversationList">
+                <p class="loading-msg">Caricando le conversazioni...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="history.js"></script>
+</body>
+</html>

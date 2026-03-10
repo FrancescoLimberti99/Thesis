@@ -10,16 +10,16 @@
     
     <div class="slideshow-container">
         <div class="slide active">
-            <img src="https://images.unsplash.com/photo-1564399579883-451a5d44ec08" alt="Colosseo">
+            <img src="images/colosseum.png" alt="Colosseo">
         </div>
         <div class="slide">
-            <img src="https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b" alt="David di Michelangelo">
+            <img src="images/pisa.png" alt="Pisa">
         </div>
         <div class="slide">
-            <img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5" alt="Venezia">
+            <img src="images/venice.png" alt="Venezia">
         </div>
         <div class="slide">
-            <img src="https://images.unsplash.com/photo-1529260830199-42c24126f198" alt="Arte Classica">
+            <img src="images/florence.png" alt="Firenze">
         </div>
     </div>
 
@@ -27,8 +27,8 @@
 
     <header class="chat-header">
         <button class="back-btn" id="backBtn">← Indietro</button>
-        <h2 class="header-title">Cultural Heritage Chatbot VQA</h2>
-        <button class="logout-btn" id="logoutBtn">Logout</button>
+        <h2 class="header-title">Chatbot</h2>
+        <button class="logout-btn" id="logoutBtn">Esci</button>
     </header>
 
     <div class="chat-container">
@@ -43,24 +43,17 @@
                     <img id="recognizedImage" src="" alt="Bene culturale">
                 </div>
                 <div class="card-info">
-                    <h3 class="card-title" id="cardTitle">Colosseo</h3>
+                    <h3 class="card-title" id="cardTitle"></h3>
                     <div class="card-details">
-                        <p><strong>Epoca:</strong> <span id="cardEpoch">80 d.C.</span></p>
-                        <p><strong>Stile:</strong> <span id="cardStyle">Architettura Romana</span></p>
-                        <p><strong>Località:</strong> <span id="cardLocation">Roma, Italia</span></p>
-                        <p><strong>Autore:</strong> <span id="cardAuthor">Imperatori Vespasiano e Tito</span></p>
+                        <p><strong>Epoca:</strong> <span id="cardEpoch"></span></p>
+                        <p><strong>Stile:</strong> <span id="cardStyle"></span></p>
+                        <p><strong>Località:</strong> <span id="cardLocation"></span></p>
+                        <p><strong>Autore:</strong> <span id="cardAuthor"></span></p>
                     </div>
                 </div>
             </div>
 
             <div class="chat-messages" id="chatMessages">
-
-                <div class="message bot-message">
-                    <div class="message-avatar">🤖</div>
-                    <div class="message-content">
-                        <p>Ho riconosciuto il <strong>Colosseo</strong>! È uno dei monumenti più iconici di Roma. Cosa vorresti sapere?</p>
-                    </div>
-                </div>
             </div>
 
             <div class="typing-indicator" id="typingIndicator" style="display: none;">

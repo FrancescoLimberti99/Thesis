@@ -49,7 +49,8 @@ def call_runpod(prompt, image_base64=None):
         "input": {
             "messages": messages,
             "max_tokens": 4096,
-            "temperature": 0.7
+            "temperature": 0.7,
+            "chat_template_kwargs": {"enable_thinking": False}
         }
     }
     
@@ -60,7 +61,7 @@ def call_runpod(prompt, image_base64=None):
             "Content-Type": "application/json"
         },
         json=payload,
-        timeout=120
+        timeout=300
     )
     
     # DEBUG — guarda questi print nel terminale Django
@@ -87,8 +88,12 @@ def chat(request):
     if input_image:
         embedding = generate_embedding(input_image)
         results = vector_db.search(embedding, top_k=1)
-        artwork_name = results[0]['metadata']['nome']
         similarity_score = results[0]['similarity']
+
+        if similarity_score < 0.7:  # soglia minima
+            return Response({'response': 'Opera non riconosciuta. Prova con un\'immagine più chiara.'})
+
+        artwork_name = results[0]['metadata']['nome']
 
     # casistica : testo
     if input_text:
@@ -105,13 +110,14 @@ def chat(request):
         context = ""
 
     # costruisci prompt con contesto opera - TODO : correggi per risposta troncata
-    prompt = f"""Sei una guida esperta di beni culturali. Rispondi in massimo 3 frasi.
-    Opera riconosciuta: {artwork_name}
+    prompt = f"""Sei una guida museale esperta. Rispondi SOLO in italiano.
+
+    Opera: {artwork_name}
     Contesto: {context}
 
-    Domanda dell'utente: {input_text or 'Descrivi questa opera'}
+    Domanda: {input_text or 'Descrivi questa opera'}
 
-    Rispondi in italiano in modo chiaro e coinvolgente."""
+    IMPORTANTE: Rispondi SOLO in italiano. Non fare riassunti del contesto. Rispondi direttamente alla domanda in modo completo. /no_think"""
 
     # converti immagine in base64 se presente
     image_base64 = None

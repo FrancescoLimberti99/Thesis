@@ -26,57 +26,90 @@ vector_db.load(VECTOR_DB_PATH)
 detector = OperaDetector(vector_db)
 
 def call_runpod(prompt, image_base64=None):
+    import time
     api_key = os.getenv('RUNPOD_API_KEY')
     endpoint_id = os.getenv('RUNPOD_ENDPOINT_ID')
-    
-    messages = []
-    
-    if image_base64:
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
-                {"type": "text", "text": prompt}
-            ]
-        })
-    else:
-        messages.append({
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    messages = [
+        {
+            "role": "system",
+            "content": "Sei una guida museale esperta. Rispondi SEMPRE e SOLO in italiano. Vai direttamente alla risposta senza preamboli. Non usare markdown, asterischi, grassetto o corsivo. Scrivi in testo semplice."
+        },
+        {
             "role": "user",
             "content": prompt
-        })
-    
+        }
+    ]
+
     payload = {
         "input": {
             "messages": messages,
-            "max_tokens": 4096,
-            "temperature": 0.7,
-            "chat_template_kwargs": {"enable_thinking": False}
+            "sampling_params": {
+                "max_tokens": 4096,
+                "temperature": 0.7
+            }
         }
     }
-    
+
+    # invia il job asincrono
     response = requests.post(
-        f"https://api.runpod.ai/v2/{endpoint_id}/runsync",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        },
+        f"https://api.runpod.ai/v2/{endpoint_id}/run",
+        headers=headers,
         json=payload,
-        timeout=300
+        timeout=30
     )
-    
-    # DEBUG — guarda questi print nel terminale Django
-    print("STATUS CODE:", response.status_code)
-    print("RAW RESPONSE:", response.text)
-    
     result = response.json()
-    print("PARSED JSON:", result)
-    return result['output'][0]['choices'][0]['tokens'][0]
+    job_id = result.get('id')
+    print("JOB AVVIATO:", job_id)
+
+    if not job_id:
+        raise Exception(f"RunPod non ha restituito un job ID: {result}")
+
+    # polling finché il job non è completato
+    for attempt in range(120):
+        time.sleep(2)
+        status_response = requests.get(
+            f"https://api.runpod.ai/v2/{endpoint_id}/status/{job_id}",
+            headers=headers,
+            timeout=30
+        )
+        status_result = status_response.json()
+        job_status = status_result.get('status')
+        print(f"Polling #{attempt + 1} — status: {job_status}")
+
+        if job_status == 'COMPLETED':
+            output = status_result.get('output')
+            print("OUTPUT COMPLETO:", output)
+            if isinstance(output, list):
+                choices = output[0].get('choices', [])
+            else:
+                choices = output.get('choices', [])
+            choice = choices[0]
+            if 'text' in choice:
+                return choice['text'].strip()
+            elif 'message' in choice:
+                return choice['message']['content'].strip()
+            elif 'tokens' in choice:
+                return ''.join(choice['tokens']).strip()
+            else:
+                raise Exception(f"Formato output non riconosciuto: {choice}")
+
+        elif job_status == 'FAILED':
+            raise Exception(f"Job RunPod fallito: {status_result.get('error')}")
+
+    raise Exception("Timeout: RunPod non ha completato il job entro il tempo massimo.")
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def chat(request):
     input_text = request.data.get('text', None)
     input_image = request.FILES.get('image', None)
+    current_artwork = request.data.get('current_artwork', None)
+    history = json.loads(request.data.get('history', '[]'))  # ← aggiungi
 
     if not input_text and not input_image:
         return Response(
@@ -84,20 +117,19 @@ def chat(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # casistica : immagine
+# casistica: immagine (ha priorità sul testo)
     if input_image:
         embedding = generate_embedding(input_image)
         results = vector_db.search(embedding, top_k=1)
         similarity_score = results[0]['similarity']
-
-        if similarity_score < 0.7:  # soglia minima
+        if similarity_score < 0.7:
             return Response({'response': 'Opera non riconosciuta. Prova con un\'immagine più chiara.'})
-
         artwork_name = results[0]['metadata']['nome']
-
-    # casistica : testo
-    if input_text:
+    # casistica: solo testo (nessuna immagine allegata)
+    elif input_text:
         artwork_name = detector.detect_opera(input_text)
+        if not artwork_name and current_artwork:  # ← fallback opera corrente
+            artwork_name = current_artwork
         similarity_score = 1.0
         if not artwork_name:
             return Response({'response': 'Opera non riconosciuta nel testo.'})
@@ -109,15 +141,23 @@ def chat(request):
     except Artwork.DoesNotExist:
         context = ""
 
-    # costruisci prompt con contesto opera - TODO : correggi per risposta troncata
-    prompt = f"""Sei una guida museale esperta. Rispondi SOLO in italiano.
+    # cronologia per il prompt
+    history_text = ""
+    if history:
+        history_text = "\nCronologia conversazione:\n"
+        for msg in history[-6:]:  # ultimi 6 messaggi per non sforare i token
+            role = "Utente" if msg['role'] == 'user' else "Assistente"
+            history_text += f"{role}: {msg['content']}\n"
 
-    Opera: {artwork_name}
-    Contesto: {context}
+    # costruisci prompt
+    domanda = input_text if input_text else f"Descrivi l'opera '{artwork_name}' in modo dettagliato e coinvolgente."
 
-    Domanda: {input_text or 'Descrivi questa opera'}
+    prompt = f"""Opera riconosciuta: {artwork_name}
+    Contesto storico: {context}
+    {history_text}
+    Domanda: {domanda}
 
-    IMPORTANTE: Rispondi SOLO in italiano. Non fare riassunti del contesto. Rispondi direttamente alla domanda in modo completo. /no_think"""
+    Fornisci una risposta dettagliata basandoti sul contesto fornito. /no_think"""
 
     # converti immagine in base64 se presente
     image_base64 = None
@@ -127,6 +167,10 @@ def chat(request):
         image_base64 = base64.b64encode(input_image.read()).decode('utf-8')
 
     try:
+        print("PROMPT:", prompt)
+        print("input_text:", input_text)
+        print("artwork_name:", artwork_name)
+        print("context:", context)
         model_response = call_runpod(prompt, image_base64)
     except Exception as e:
         model_response = f"Errore del modello: {str(e)}"

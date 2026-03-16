@@ -127,13 +127,17 @@ function sendMessage() {
     }
 }
 
-// CHIAMATA BACKEND
+let currentArtwork = null;
+let conversationHistory = [];
+
 async function sendToBackend(text, imageFile) {
     showTypingIndicator();
 
     const formData = new FormData();
     if (text) formData.append('text', text);
     if (imageFile) formData.append('image', imageFile);
+    if (currentArtwork) formData.append('current_artwork', currentArtwork);
+    formData.append('history', JSON.stringify(conversationHistory));
 
     try {
         const response = await fetch(`${API_BASE}/chat/`, {
@@ -145,10 +149,21 @@ async function sendToBackend(text, imageFile) {
         hideTypingIndicator();
 
         if (response.ok) {
-            // aggiorna la card con i dati dell'opera riconosciuta
             if (data.artwork) {
+                currentArtwork = data.artwork; // aggiorna opera corrente
                 updateCulturalCard(data.artwork, imageFile);
             }
+            
+            // aggiorna cronologia
+            conversationHistory.push({
+                role: 'user',
+                content: text || 'Immagine caricata'
+            });
+            conversationHistory.push({
+                role: 'assistant',
+                content: data.response
+            });
+
             addBotMessage(data.response);
         } else {
             addBotMessage(data.response || 'Si è verificato un errore. Riprova.');

@@ -13,6 +13,12 @@ function nextSlide() {
 setInterval(nextSlide, 10000);
 
 // LOGIN
+['username', 'password'].forEach(id => {
+    document.getElementById(id).addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('loginBtn').click();
+    });
+});
+
 document.getElementById('loginBtn').addEventListener('click', async () => {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();

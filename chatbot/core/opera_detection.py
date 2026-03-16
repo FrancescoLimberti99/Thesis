@@ -102,29 +102,31 @@ class OperaDetector:
         return None
 
     def _fuzzy_match(self, message_lower: str, cutoff: float = 0.75) -> Optional[str]:
-        """
-        Cerca match approssimativo per gestire errori di battitura.
-        """
         words = re.findall(r'\b\w{4,}\b', message_lower)
+        all_words_raw = re.findall(r'\b\w+\b', message_lower)
 
-        for word in words:
-            matches = get_close_matches(
-                word,
-                [o.lower() for o in self.opere_names],
-                n=1,
-                cutoff=cutoff
-            )
+        # singole parole, coppie, triplette
+        candidates = []
+        candidates.extend([w for w in words if len(w) >= 4])  # parole singole (min 4 chars)
+        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]}" 
+                        for i in range(len(all_words_raw)-1)])  # coppie
+        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]} {all_words_raw[i+2]}" 
+                        for i in range(len(all_words_raw)-2)])  # triplette
+
+        for candidate in candidates:
+            # confronta con nomi opere
+            matches = get_close_matches(candidate,[o.lower() for o in self.opere_names],n=1,cutoff=cutoff)
             if matches:
                 for opera in self.opere_names:
                     if opera.lower() == matches[0]:
                         return opera
 
-            # cerca anche negli alias
+            # confronta con alias
             all_aliases = []
             for alias_list in self.aliases.values():
                 all_aliases.extend(alias_list)
 
-            matches = get_close_matches(word, all_aliases, n=1, cutoff=cutoff)
+            matches = get_close_matches(candidate, all_aliases, n=1, cutoff=cutoff)
             if matches:
                 for opera_name, alias_list in self.aliases.items():
                     if matches[0] in alias_list:

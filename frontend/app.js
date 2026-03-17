@@ -145,3 +145,49 @@ const loginBtn = document.getElementById('loginBtn');
 loginBtn.addEventListener('click', () => {
     window.location.href = 'login.html';
 });
+
+// GALLERIA OPERE
+const galleryBtn = document.getElementById('galleryBtn');
+const galleryModal = document.getElementById('galleryModal');
+const galleryModalClose = document.getElementById('galleryModalClose');
+const galleryGrid = document.getElementById('galleryGrid');
+
+galleryBtn.addEventListener('click', async () => {
+    galleryModal.classList.add('active');
+    galleryGrid.innerHTML = '<p class="gallery-loading">Caricamento opere...</p>';
+
+    try {
+        const response = await fetch('http://localhost:8000/api/artworks/');
+        const artworks = await response.json();
+
+        if (artworks.length === 0) {
+            galleryGrid.innerHTML = '<p class="gallery-loading">Nessuna opera disponibile.</p>';
+            return;
+        }
+
+        galleryGrid.innerHTML = artworks.map(artwork => `
+            <div class="gallery-item" onclick="selectArtwork('${artwork.name.replace(/'/g, "\\'")}')">
+                <img src="${artwork.images && artwork.images.length > 0 ? 'http://localhost:8000' + artwork.images[0].image : 'https://via.placeholder.com/160x120?text=No+Image'}" alt="${artwork.name}">
+                <span class="gallery-item-name">${artwork.name}</span>
+            </div>
+        `).join('');
+    } catch (error) {
+        galleryGrid.innerHTML = '<p class="gallery-loading">Errore nel caricamento delle opere.</p>';
+    }
+});
+
+galleryModalClose.addEventListener('click', () => {
+    galleryModal.classList.remove('active');
+});
+
+galleryModal.addEventListener('click', (e) => {
+    if (e.target === galleryModal) galleryModal.classList.remove('active');
+});
+
+function selectArtwork(artworkName) {
+    galleryModal.classList.remove('active');
+    sessionStorage.setItem('inputType', 'text');
+    sessionStorage.setItem('userMessage', artworkName);
+    sessionStorage.setItem('gallerySelected', 'true');
+    window.location.href = 'chat.html';
+}

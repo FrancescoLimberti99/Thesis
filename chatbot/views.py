@@ -191,12 +191,14 @@ def chat(request):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
 def artwork_list(request):
     if request.method == 'GET':
         artworks = Artwork.objects.all()
         serializer = ArtworkSerializer(artworks, many=True)
         return Response(serializer.data)
+
+    if not request.user.is_authenticated:
+        return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     if request.method == 'POST':
         serializer = ArtworkSerializer(data=request.data)

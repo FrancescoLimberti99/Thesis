@@ -34,6 +34,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const inputType = sessionStorage.getItem('inputType');
     const userMessage = sessionStorage.getItem('userMessage');
     const uploadedImage = sessionStorage.getItem('uploadedImage');
+    const gallerySelected = sessionStorage.getItem('gallerySelected');
 
     console.log('inputType:', sessionStorage.getItem('inputType'));
     console.log('userMessage:', sessionStorage.getItem('userMessage'));
@@ -41,7 +42,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (inputType === 'image' && uploadedImage) {
         culturalCard.style.display = 'none';
-        // converti base64 in file e manda al backend
         fetch(uploadedImage)
             .then(r => r.blob())
             .then(blob => {
@@ -49,6 +49,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 addUserMessageWithImage(uploadedImage, userMessage || '');
                 sendToBackend(userMessage || '', file);
             });
+    } else if (gallerySelected === 'true' && userMessage) {
+        culturalCard.style.display = 'none';
+        currentArtwork = userMessage;
+        addBotMessage(`Cosa vuoi sapere su ${userMessage}?`);
+        updateCulturalCard(userMessage, null);
     } else if (inputType === 'text' && userMessage) {
         culturalCard.style.display = 'none';
         addUserMessage(userMessage);

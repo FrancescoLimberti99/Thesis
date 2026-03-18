@@ -9,6 +9,7 @@ Quando l'utente scrive "Dimmi della Gioconda", questo modulo:
 Gestisce anche:
 - Alias/sinonimi definiti dal curatore (es. "Mona Lisa" → "Gioconda")
 - Fuzzy matching per errori di battitura
+- Rilevamento multiplo per paragoni tra opere
 """
 
 import os
@@ -71,7 +72,8 @@ class OperaDetector:
 
     def detect_opera(self, user_message: str) -> Optional[str]:
         """
-        Rileva nome opera nel messaggio utente.
+        Rileva la prima opera nel messaggio utente (retrocompatibilità).
+        Per rilevamento multiplo usa detect_multiple().
 
         Args:
             user_message: Testo scritto dall'utente
@@ -79,27 +81,76 @@ class OperaDetector:
         Returns:
             Nome opera trovato o None
         """
+        results = self.detect_multiple(user_message)
+        return results[0] if results else None
+
+    def detect_multiple(self, user_message: str) -> List[str]:
+        """
+        Rileva TUTTE le opere citate nel messaggio utente.
+        Utile per paragoni (es. "confronta la Gioconda con l'Urlo").
+
+        Args:
+            user_message: Testo scritto dall'utente
+
+        Returns:
+            Lista ordinata di nomi opere trovate (senza duplicati)
+        """
         message_lower = user_message.lower()
+        found = []
 
         # CHECK 1: Match esatto con nomi opere nel database
         for opera in self.opere_names:
-            if opera.lower() in message_lower:
-                return opera
+            if opera.lower() in message_lower and opera not in found:
+                found.append(opera)
 
         # CHECK 2: Match con alias dal database
         for opera_name, alias_list in self.aliases.items():
             for alias in alias_list:
                 if alias in message_lower:
                     for opera in self.opere_names:
-                        if opera.lower() == opera_name:
-                            return opera
+                        if opera.lower() == opera_name and opera not in found:
+                            found.append(opera)
 
         # CHECK 3: Fuzzy matching per errori di battitura
-        fuzzy_match = self._fuzzy_match(message_lower)
-        if fuzzy_match:
-            return fuzzy_match
+        for match in self._fuzzy_match_all(message_lower, exclude=found):
+            if match not in found:
+                found.append(match)
 
-        return None
+        return found
+
+    def _fuzzy_match_all(self, message_lower: str, cutoff: float = 0.75, exclude: List[str] = []) -> List[str]:
+        all_words_raw = re.findall(r'\b\w+\b', message_lower)
+
+        # singole parole, coppie, triplette
+        candidates = []
+        candidates.extend([w for w in all_words_raw if len(w) >= 4])
+        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]}"
+                        for i in range(len(all_words_raw)-1)])
+        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]} {all_words_raw[i+2]}"
+                        for i in range(len(all_words_raw)-2)])
+
+        found = []
+        opere_remaining = [o for o in self.opere_names if o not in exclude]
+
+        for candidate in candidates:
+            # confronta con nomi opere
+            matches = get_close_matches(candidate, [o.lower() for o in opere_remaining], n=1, cutoff=cutoff)
+            if matches:
+                for opera in opere_remaining:
+                    if opera.lower() == matches[0] and opera not in found:
+                        found.append(opera)
+
+            # confronta con alias
+            all_aliases = [a for al in self.aliases.values() for a in al]
+            matches = get_close_matches(candidate, all_aliases, n=1, cutoff=cutoff)
+            if matches:
+                for opera_name, alias_list in self.aliases.items():
+                    if matches[0] in alias_list:
+                        for opera in opere_remaining:
+                            if opera.lower() == opera_name and opera not in found:
+                                found.append(opera)
+
+        return found
 
     def _fuzzy_match(self, message_lower: str, cutoff: float = 0.75) -> Optional[str]:
         words = re.findall(r'\b\w{4,}\b', message_lower)
@@ -107,11 +158,11 @@ class OperaDetector:
 
         # singole parole, coppie, triplette
         candidates = []
-        candidates.extend([w for w in words if len(w) >= 4])  # parole singole (min 4 chars)
-        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]}" 
-                        for i in range(len(all_words_raw)-1)])  # coppie
-        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]} {all_words_raw[i+2]}" 
-                        for i in range(len(all_words_raw)-2)])  # triplette
+        candidates.extend([w for w in words if len(w) >= 4])
+        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]}"
+                        for i in range(len(all_words_raw)-1)])
+        candidates.extend([f"{all_words_raw[i]} {all_words_raw[i+1]} {all_words_raw[i+2]}"
+                        for i in range(len(all_words_raw)-2)])
 
         for candidate in candidates:
             # confronta con nomi opere

@@ -125,39 +125,64 @@ def chat(request):
         if similarity_score < 0.7:
             return Response({'response': 'Opera non riconosciuta. Prova con un\'immagine più chiara.'})
         artwork_name = results[0]['metadata']['nome']
+        # rileva eventuali opere aggiuntive citate nel testo
+        extra_artworks = detector.detect_multiple(input_text) if input_text else []
+        extra_artworks = [o for o in extra_artworks if o != artwork_name]
     # casistica: solo testo (nessuna immagine allegata)
     elif input_text:
-        artwork_name = detector.detect_opera(input_text)
-        if not artwork_name and current_artwork:  # ← fallback opera corrente
-            artwork_name = current_artwork
-        similarity_score = 1.0
-        if not artwork_name:
+        detected_artworks = detector.detect_multiple(input_text)
+        if not detected_artworks and current_artwork:
+            detected_artworks = [current_artwork]
+        if not detected_artworks:
             return Response({'response': 'Opera non riconosciuta nel testo.'})
+        artwork_name = detected_artworks[0]
+        extra_artworks = detected_artworks[1:]
+        similarity_score = 1.0
 
-    # recupera contesto dal db
+    # recupera contesto opera principale dal db
     try:
         artwork = Artwork.objects.get(name=artwork_name)
-        context = artwork.context
+        main_context = f'Contesto {artwork_name}: {artwork.context}'
     except Artwork.DoesNotExist:
-        context = ""
+        main_context = f'{artwork_name}: opera non presente nel database, usa la tua conoscenza generale.'
+
+    # recupera contesti opere aggiuntive (es. paragoni)
+    extra_context = ''
+    for opera in extra_artworks:
+        try:
+            a = Artwork.objects.get(name=opera)
+            extra_context += f'\nContesto {opera}: {a.context}'
+        except Artwork.DoesNotExist:
+            extra_context += f'\n{opera}: opera non presente nel database, usa la tua conoscenza generale.'
 
     # cronologia per il prompt
-    history_text = ""
+    history_text = ''
     if history:
-        history_text = "\nCronologia conversazione:\n"
-        for msg in history[-6:]:  # ultimi 6 messaggi per non sforare i token
-            role = "Utente" if msg['role'] == 'user' else "Assistente"
+        history_text = '\nCronologia conversazione:\n'
+        for msg in history[-6:]:
+            role = 'Utente' if msg['role'] == 'user' else 'Assistente'
             history_text += f"{role}: {msg['content']}\n"
 
     # costruisci prompt
     domanda = input_text if input_text else f"Descrivi l'opera '{artwork_name}' in modo dettagliato e coinvolgente."
 
-    prompt = f"""Opera riconosciuta: {artwork_name}
-    Contesto storico: {context}
-    {history_text}
-    Domanda: {domanda}
+    # specifica chiaramente la fonte di riconoscimento di ogni opera
+    if input_image:
+        image_label = f'Opera riconosciuta dalla IMMAGINE caricata: {artwork_name}'
+        text_labels = '\n'.join([f'Opera citata nel TESTO: {o}' for o in extra_artworks])
+        source_info = image_label + ('\n' + text_labels if text_labels else '')
+    else:
+        source_info = '\n'.join([f'Opera citata nel testo: {o}' for o in ([artwork_name] + extra_artworks)])
 
-    Fornisci una risposta dettagliata basandoti sul contesto fornito. /no_think"""
+    prompt = (
+        f'{source_info}\n'
+        f'    {main_context}{extra_context}\n'
+        f'    {history_text}\n'
+        f'    Domanda: {domanda}\n\n'
+        f'    Rispondi usando il contesto fornito per le opere presenti nel database. '
+        f'Per le opere non presenti o per informazioni mancanti, usa la tua conoscenza generale. Controlla bene che il messaggio non si riferisca ad opere esistenti ma non riconosciute.'
+        f'Se viene chiesto di identificare l\'opera nell\'immagine, rispondi basandoti SOLO sull\'opera riconosciuta dalla immagine, ignorando quelle citate nel testo. /no_think'
+    )
 
     # converti immagine in base64 se presente
     image_base64 = None
@@ -170,7 +195,7 @@ def chat(request):
         print("PROMPT:", prompt)
         print("input_text:", input_text)
         print("artwork_name:", artwork_name)
-        print("context:", context)
+        print("context:", main_context)
         model_response = call_runpod(prompt, image_base64)
     except Exception as e:
         model_response = f"Errore del modello: {str(e)}"
@@ -184,8 +209,10 @@ def chat(request):
         model_response=model_response
     )
 
+    all_artworks = [artwork_name] + extra_artworks
     return Response({
         'artwork': artwork_name,
+        'artworks': all_artworks,
         'response': model_response
     })
 

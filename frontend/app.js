@@ -79,7 +79,7 @@ function handleFile(file) {
     reader.onload = (e) => {
         previewImage.src = e.target.result;
         inputContent.style.display = 'none';
-        previewContainer.style.display = 'block';
+        previewContainer.style.display = 'flex';
     };
     reader.readAsDataURL(file);
 }

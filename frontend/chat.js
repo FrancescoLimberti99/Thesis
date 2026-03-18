@@ -17,7 +17,6 @@ const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 const typingIndicator = document.getElementById('typingIndicator');
-const culturalCard = document.getElementById('culturalCard');
 const attachBtn = document.getElementById('attachBtn');
 const chatFileInput = document.getElementById('chatFileInput');
 const chatImagePreview = document.getElementById('chatImagePreview');
@@ -41,8 +40,7 @@ window.addEventListener('DOMContentLoaded', () => {
     sessionStorage.clear();
 
     if (inputType === 'image' && uploadedImage) {
-        culturalCard.style.display = 'none';
-        fetch(uploadedImage)
+            fetch(uploadedImage)
             .then(r => r.blob())
             .then(blob => {
                 const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
@@ -50,17 +48,13 @@ window.addEventListener('DOMContentLoaded', () => {
                 sendToBackend(userMessage || '', file);
             });
     } else if (gallerySelected === 'true' && userMessage) {
-        culturalCard.style.display = 'none';
-        currentArtwork = userMessage;
+            currentArtwork = userMessage;
         addBotMessage(`Cosa vuoi sapere su ${userMessage}?`);
-        updateCulturalCard(userMessage, null);
     } else if (inputType === 'text' && userMessage) {
-        culturalCard.style.display = 'none';
-        addUserMessage(userMessage);
+            addUserMessage(userMessage);
         sendToBackend(userMessage, null);
     } else {
-        culturalCard.style.display = 'none';
-        addBotMessage('Ciao! Puoi scrivermi il nome di un\'opera o caricare una foto per iniziare.');
+            addBotMessage('Ciao! Puoi scrivermi il nome di un\'opera o caricare una foto per iniziare.');
     }
 });
 
@@ -156,7 +150,6 @@ async function sendToBackend(text, imageFile) {
         if (response.ok) {
             if (data.artwork) {
                 currentArtwork = data.artwork; // aggiorna opera corrente
-                updateCulturalCard(data.artwork, imageFile);
             }
             
             // aggiorna cronologia
@@ -179,47 +172,6 @@ async function sendToBackend(text, imageFile) {
     }
 }
 
-// AGGIORNA CARD OPERA
-async function updateCulturalCard(artworkName, imageFile) {
-    culturalCard.style.display = 'flex';
-
-    document.getElementById('cardTitle').textContent = artworkName;
-    document.getElementById('cardEpoch').textContent = 'Caricamento...';
-    document.getElementById('cardStyle').textContent = 'Caricamento...';
-    document.getElementById('cardLocation').textContent = 'Caricamento...';
-    document.getElementById('cardAuthor').textContent = 'Caricamento...';
-
-    if (imageFile) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('recognizedImage').src = e.target.result;
-        };
-        reader.readAsDataURL(imageFile);
-    }
-
-    // recupera dettagli opera dal backend
-    try {
-        const response = await fetch(`${API_BASE}/artworks/`, {
-            credentials: 'include'
-        });
-        const artworks = await response.json();
-        const artwork = artworks.find(a => a.name === artworkName);
-
-        if (artwork) {
-            document.getElementById('cardTitle').textContent = artwork.name;
-            document.getElementById('cardEpoch').textContent = artwork.period || '—';
-            document.getElementById('cardStyle').textContent = artwork.style || '—';
-            document.getElementById('cardLocation').textContent = artwork.location || '—';
-            document.getElementById('cardAuthor').textContent = artwork.author || '—';
-
-            if (!imageFile && artwork.images && artwork.images.length > 0) {
-                document.getElementById('recognizedImage').src = 'http://localhost:8000' + artwork.images[0].image;
-            }
-        }
-    } catch (error) {
-        console.error('Errore recupero dettagli opera:', error);
-    }
-}
 
 // MESSAGGI
 function addUserMessage(text) {

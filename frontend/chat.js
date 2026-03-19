@@ -40,7 +40,7 @@ window.addEventListener('DOMContentLoaded', () => {
     sessionStorage.clear();
 
     if (inputType === 'image' && uploadedImage) {
-            fetch(uploadedImage)
+        fetch(uploadedImage)
             .then(r => r.blob())
             .then(blob => {
                 const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
@@ -48,13 +48,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 sendToBackend(userMessage || '', file);
             });
     } else if (gallerySelected === 'true' && userMessage) {
-            currentArtwork = userMessage;
+        // manda subito una chiamata al backend così conosce l'opera fin dall'inizio
         addBotMessage(`Cosa vuoi sapere su ${userMessage}?`);
+        sendToBackend(`Presentami brevemente l'opera: ${userMessage}`, null);
     } else if (inputType === 'text' && userMessage) {
-            addUserMessage(userMessage);
+        addUserMessage(userMessage);
         sendToBackend(userMessage, null);
     } else {
-            addBotMessage('Ciao! Puoi scrivermi il nome di un\'opera o caricare una foto per iniziare.');
+        addBotMessage('Ciao! Puoi scrivermi il nome di un\'opera o caricare una foto per iniziare.');
     }
 });
 
@@ -127,15 +128,20 @@ function sendMessage() {
 }
 
 let currentArtwork = null;
+let previousArtwork = null;
 let conversationHistory = [];
 
 async function sendToBackend(text, imageFile) {
     showTypingIndicator();
 
+    // salva l'opera corrente prima della chiamata per usarla come previous se cambia
+    const artworkBeforeCall = currentArtwork;
+
     const formData = new FormData();
     if (text) formData.append('text', text);
     if (imageFile) formData.append('image', imageFile);
     if (currentArtwork) formData.append('current_artwork', currentArtwork);
+    if (previousArtwork) formData.append('previous_artwork', previousArtwork);
     formData.append('history', JSON.stringify(conversationHistory));
 
     try {
@@ -148,14 +154,15 @@ async function sendToBackend(text, imageFile) {
         hideTypingIndicator();
 
         if (response.ok) {
-            if (data.artwork) {
-                currentArtwork = data.artwork; // aggiorna opera corrente
+            if (data.artwork && data.artwork !== currentArtwork) {
+                previousArtwork = artworkBeforeCall || previousArtwork;
+                currentArtwork = data.artwork;
             }
             
             // aggiorna cronologia
             conversationHistory.push({
                 role: 'user',
-                content: text || 'Immagine caricata'
+                content: text || (data.artwork ? `[Immagine caricata - opera riconosciuta: ${data.artwork}]` : 'Immagine caricata')
             });
             conversationHistory.push({
                 role: 'assistant',

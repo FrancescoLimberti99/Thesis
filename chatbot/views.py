@@ -109,6 +109,7 @@ def chat(request):
     input_text = request.data.get('text', None)
     input_image = request.FILES.get('image', None)
     current_artwork = request.data.get('current_artwork', None)
+    previous_artwork = request.data.get('previous_artwork', None)
     history = json.loads(request.data.get('history', '[]'))  # ← aggiungi
 
     if not input_text and not input_image:
@@ -144,7 +145,7 @@ def chat(request):
         artwork = Artwork.objects.get(name=artwork_name)
         main_context = f'Contesto {artwork_name}: {artwork.context}'
     except Artwork.DoesNotExist:
-        main_context = f'{artwork_name}: opera non presente nel database, usa la tua conoscenza generale.'
+        main_context = f'{artwork_name}: opera non presente nel database.'
 
     # recupera contesti opere aggiuntive (es. paragoni)
     extra_context = ''
@@ -153,7 +154,25 @@ def chat(request):
             a = Artwork.objects.get(name=opera)
             extra_context += f'\nContesto {opera}: {a.context}'
         except Artwork.DoesNotExist:
-            extra_context += f'\n{opera}: opera non presente nel database, usa la tua conoscenza generale.'
+            extra_context += f'\n{opera}: opera non presente nella galleria.'
+
+    # recupera contesto opera precedente se disponibile
+    previous_context = ''
+    if previous_artwork and previous_artwork != artwork_name:
+        try:
+            prev = Artwork.objects.get(name=previous_artwork)
+            previous_context = f'\nContesto opera precedente {previous_artwork}: {prev.context}'
+        except Artwork.DoesNotExist:
+            previous_context = f'\n{previous_artwork}: opera precedente non presente nel database.'
+
+    # riepilogo esplicito di tutte le opere discusse nella sessione
+    opere_sessione = [artwork_name]
+    if previous_artwork and previous_artwork not in opere_sessione:
+        opere_sessione.append(previous_artwork)
+    for o in extra_artworks:
+        if o not in opere_sessione:
+            opere_sessione.append(o)
+    riepilogo_opere = ', '.join(opere_sessione)
 
     # cronologia per il prompt
     history_text = ''
@@ -162,6 +181,8 @@ def chat(request):
         for msg in history[-6:]:
             role = 'Utente' if msg['role'] == 'user' else 'Assistente'
             history_text += f"{role}: {msg['content']}\n"
+    # nota esplicita sulle opere della sessione in coda alla history
+    history_text += f'\nOpere discusse in questa sessione: {riepilogo_opere}\n'
 
     # costruisci prompt
     domanda = input_text if input_text else f"Descrivi l'opera '{artwork_name}' in modo dettagliato e coinvolgente."
@@ -176,11 +197,11 @@ def chat(request):
 
     prompt = (
         f'{source_info}\n'
-        f'    {main_context}{extra_context}\n'
+        f'    {main_context}{extra_context}{previous_context}\n'
         f'    {history_text}\n'
         f'    Domanda: {domanda}\n\n'
-        f'    Rispondi usando il contesto fornito per le opere presenti nel database. '
-        f'Per le opere non presenti o per informazioni mancanti, usa la tua conoscenza generale. Controlla bene che il messaggio non si riferisca ad opere esistenti ma non riconosciute.'
+        f'Rispondi usando il contesto fornito per le opere presenti nel database. '
+        f'Per le opere non presenti o per informazioni mancanti, usa la tua conoscenza generale. '
         f'Se viene chiesto di identificare l\'opera nell\'immagine, rispondi basandoti SOLO sull\'opera riconosciuta dalla immagine, ignorando quelle citate nel testo. /no_think'
     )
 

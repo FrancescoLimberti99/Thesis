@@ -48,9 +48,21 @@ window.addEventListener('DOMContentLoaded', () => {
                 sendToBackend(userMessage || '', file);
             });
     } else if (gallerySelected === 'true' && userMessage) {
-        // manda subito una chiamata al backend così conosce l'opera fin dall'inizio
+        currentArtwork = userMessage;
         addBotMessage(`Cosa vuoi sapere su ${userMessage}?`);
-        sendToBackend(`Presentami brevemente l'opera: ${userMessage}`, null);
+        conversationHistory.push({ role: 'user', content: `Voglio sapere informazioni su ${userMessage}` });
+        conversationHistory.push({ role: 'assistant', content: `Cosa vuoi sapere su ${userMessage}?` });
+        // chiamata silenziosa al backend per registrare l'opera corrente
+        const formData = new FormData();
+        formData.append('text', userMessage);
+        formData.append('current_artwork', userMessage);
+        formData.append('history', JSON.stringify(conversationHistory));
+        fetch(`${API_BASE}/chat/`, { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.artwork) currentArtwork = data.artwork;
+            })
+            .catch(() => {});
     } else if (inputType === 'text' && userMessage) {
         addUserMessage(userMessage);
         sendToBackend(userMessage, null);
@@ -155,6 +167,7 @@ async function sendToBackend(text, imageFile) {
 
         if (response.ok) {
             if (data.artwork && data.artwork !== currentArtwork) {
+                // usa artworkBeforeCall come previous così cattura anche le opere dalla galleria
                 previousArtwork = artworkBeforeCall || previousArtwork;
                 currentArtwork = data.artwork;
             }

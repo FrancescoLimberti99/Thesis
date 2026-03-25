@@ -6,7 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from .models import Artwork, ArtworkImage, Conversation
 from .serializers import ArtworkSerializer, ConversationSerializer
-from .core.embeddings import generate_embedding
+from .core.embeddings import generate_embedding, generate_embedding_with_crops
 from .core.vector_db import VectorDB
 from .core.opera_detection import OperaDetector
 import json
@@ -234,7 +234,7 @@ def artwork_list(request):
                 artwork_image = ArtworkImage.objects.create(artwork=artwork, image=image)
                 image_path = os.path.join(settings.MEDIA_ROOT, str(artwork_image.image))
                 try:
-                    embedding = generate_embedding(image_path)
+                    embeddings = generate_embedding_with_crops(image_path)
                     metadata = {
                         'nome': artwork.name,
                         'filename': str(artwork_image.image),
@@ -244,7 +244,8 @@ def artwork_list(request):
                         'localita': artwork.location,
                         'stile': artwork.style,
                     }
-                    vector_db.add(embedding, metadata)
+                    for emb in embeddings:
+                        vector_db.add(emb, metadata)
                 except Exception as e:
                     print(f"Errore embedding {image_path}: {e}")
             vector_db.save(VECTOR_DB_PATH)
@@ -283,7 +284,7 @@ def artwork_detail(request, pk):
                     artwork_image = ArtworkImage.objects.create(artwork=artwork, image=image)
                     image_path = os.path.join(settings.MEDIA_ROOT, str(artwork_image.image))
                     try:
-                        embedding = generate_embedding(image_path)
+                        embeddings = generate_embedding_with_crops(image_path)
                         metadata = {
                             'nome': artwork.name,
                             'filename': str(artwork_image.image),
@@ -293,7 +294,8 @@ def artwork_detail(request, pk):
                             'localita': artwork.location,
                             'stile': artwork.style,
                         }
-                        vector_db.add(embedding, metadata)
+                        for emb in embeddings:
+                            vector_db.add(emb, metadata)
                     except Exception as e:
                         print(f"Errore embedding {image_path}: {e}")
                 vector_db.save(VECTOR_DB_PATH)

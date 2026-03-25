@@ -86,8 +86,65 @@ class ImageEmbedding:
         
         return embeddings
 
+    def generate_embedding_with_crops(self, image_input, crop_size_ratios=(0.5, 0.75), stride_ratio=0.5):
+        """
+        Genera embedding dell'immagine intera + embedding di sottoriquadri (crop).
+        Permette di riconoscere dettagli e pattern all'interno di un'opera piu grande.
 
-# FUNZIONE HELPER GLOBALE
+        Args:
+            image_input: Path dell'immagine (str) o oggetto file-like
+            crop_size_ratios: Tuple di frazioni della dimensione originale per i crop
+                              es. (0.5, 0.75) genera crop al 50% e 75% della dimensione
+            stride_ratio: Passo dello sliding window come frazione del crop_size
+                          es. 0.5 = 50% di sovrapposizione tra crop adiacenti
+
+        Returns:
+            list: Lista di numpy.ndarray, il primo e' l'embedding dell'intera immagine,
+                  i successivi sono gli embedding dei crop
+        """
+        # carica immagine
+        if isinstance(image_input, str):
+            image = Image.open(image_input).convert('RGB')
+        else:
+            image_input.seek(0)
+            image = Image.open(image_input).convert('RGB')
+
+        embeddings = []
+        w, h = image.size
+
+        # embedding immagine intera
+        inputs = self.processor(images=image, return_tensors="pt")
+        with torch.no_grad():
+            outputs = self.model.vision_model(**inputs)
+            feat = outputs.pooler_output
+        feat = feat / feat.norm(p=2, dim=-1, keepdim=True)
+        embeddings.append(feat.numpy().flatten())
+
+        # sliding window per ogni ratio
+        for ratio in crop_size_ratios:
+            crop_w = int(w * ratio)
+            crop_h = int(h * ratio)
+            stride_x = max(1, int(crop_w * stride_ratio))
+            stride_y = max(1, int(crop_h * stride_ratio))
+
+            x = 0
+            while x + crop_w <= w:
+                y = 0
+                while y + crop_h <= h:
+                    crop = image.crop((x, y, x + crop_w, y + crop_h))
+                    inputs = self.processor(images=crop, return_tensors="pt")
+                    with torch.no_grad():
+                        outputs = self.model.vision_model(**inputs)
+                        feat = outputs.pooler_output
+                    feat = feat / feat.norm(p=2, dim=-1, keepdim=True)
+                    embeddings.append(feat.numpy().flatten())
+                    y += stride_y
+                x += stride_x
+
+        return embeddings
+
+
+# FUNZIONI HELPER GLOBALE
 # Per compatibilità con altri moduli
 
 _embedding_model = None
@@ -111,6 +168,25 @@ def generate_embedding(image_path):
     
     return _embedding_model.generate_embedding(image_path)
 
+def generate_embedding_with_crops(image_input, crop_size_ratios=(0.5, 0.75), stride_ratio=0.5):
+    """
+    Funzione helper globale per generate_embedding_with_crops.
+    Inizializza modello automaticamente al primo uso (lazy loading).
+
+    Args:
+        image_input: Path dell'immagine (str) o oggetto file-like
+        crop_size_ratios: Frazioni della dimensione per i crop
+        stride_ratio: Passo dello sliding window
+
+    Returns:
+        list: Lista di embedding (immagine intera + crop)
+    """
+    global _embedding_model
+
+    if _embedding_model is None:
+        _embedding_model = ImageEmbedding()
+
+    return _embedding_model.generate_embedding_with_crops(image_input, crop_size_ratios, stride_ratio)
 
 if __name__ == "__main__":
     """

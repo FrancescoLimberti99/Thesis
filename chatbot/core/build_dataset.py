@@ -29,7 +29,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from chatbot.models import Artwork, ArtworkImage
-from chatbot.core.embeddings import generate_embedding
+from chatbot.core.embeddings import generate_embedding, generate_embedding_with_crops
 from chatbot.core.vector_db import VectorDB
 
 
@@ -81,7 +81,8 @@ def build_dataset(output_path=None):
                 continue
 
             try:
-                embedding = generate_embedding(str(image_path))
+                # genera embedding immagine intera + crop per riconoscimento dettagli
+                embeddings = generate_embedding_with_crops(str(image_path))
 
                 metadata = {
                     'nome': artwork.name,
@@ -93,9 +94,10 @@ def build_dataset(output_path=None):
                     'stile': artwork.style,
                 }
 
-                db.add(embedding, metadata)
+                for emb in embeddings:
+                    db.add(emb, metadata)
                 success_count += 1
-                print(f"  OK: {artwork_image.image}")
+                print(f"  OK: {artwork_image.image} ({len(embeddings)} embeddings)")
 
             except Exception as e:
                 print(f"  ERRORE: {artwork_image.image} - {e}")

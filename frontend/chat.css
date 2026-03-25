@@ -217,6 +217,7 @@ body {
     align-items: flex-start;
     overflow-y: auto;
     justify-content: flex-start;
+    gap: 6px;
 }
 
 .context-card::-webkit-scrollbar {

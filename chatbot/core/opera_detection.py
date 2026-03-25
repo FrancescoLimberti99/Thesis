@@ -214,7 +214,7 @@ class OperaDetector:
 
         return None, 'none'
 
-    def get_contesto(self, opera_name: str) -> Optional[Dict]:
+    def get_context(self, opera_name: str) -> Optional[Dict]:
         """
         Recupera contesto e metadata di un'opera dal vector_db.
         """

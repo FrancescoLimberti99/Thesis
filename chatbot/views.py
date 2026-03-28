@@ -41,7 +41,16 @@ def call_runpod(prompt, image_base64=None):
         },
         {
             "role": "user",
-            "content": prompt
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                },
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ] if image_base64 else prompt
         }
     ]
 
@@ -155,6 +164,13 @@ def chat(request):
         except Artwork.DoesNotExist:
             extra_context += f"\n{opera}: usa la tua conoscenza generale."
 
+    # converti immagine in base64 se presente
+    image_base64 = None
+    if input_image:
+        import base64
+        input_image.seek(0)
+        image_base64 = base64.b64encode(input_image.read()).decode('utf-8')
+
     # cronologia per il prompt
     history_text = ""
     if history:
@@ -172,6 +188,7 @@ def chat(request):
             f"Opere citate: {quoted_artworks}\n"
             f"Contesto {artwork_name}: {context}{extra_context}\n"
             f"{history_text}\n"
+            f"{'Immagine: vedi immagine allegata.\n' if input_image else ''}"
             f"Domanda: {domanda}\n\n"
             f"Rispondi alla domanda usando i contesti forniti e la tua conoscenza generale. /no_think"
         )
@@ -180,15 +197,10 @@ def chat(request):
             f"Opera: {artwork_name}\n"
             f"Contesto storico: {context}\n"
             f"{history_text}\n"
+            f"{'Immagine: vedi immagine allegata.\n' if input_image else ''}"
             f"Domanda: {domanda}\n\n"
             f"Fornisci una risposta dettagliata basandoti sul contesto fornito. /no_think"
         )
-    # converti immagine in base64 se presente
-    image_base64 = None
-    if input_image:
-        import base64
-        input_image.seek(0)
-        image_base64 = base64.b64encode(input_image.read()).decode('utf-8')
 
     try:
         print("PROMPT:", prompt)

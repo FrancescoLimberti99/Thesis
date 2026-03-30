@@ -214,6 +214,10 @@ function askArtworkChoice(artworks) {
 }
 
 function selectArtwork(artworkName) {
+    // disabilita tutti i bottoni di scelta dopo la selezione
+    document.querySelectorAll('.artwork-choice-btn').forEach(btn => {
+        btn.disabled = true;
+    });
     currentArtwork = artworkName;
     updateCulturalCard(artworkName, null);
     addBotMessage(`Perfetto! Parliamo di ${artworkName}. Cosa vuoi sapere?`);

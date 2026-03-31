@@ -154,9 +154,12 @@ async function sendToBackend(text, imageFile) {
             } else if (extraArtworks.length > 0 && currentArtwork) {
                 // siamo già in una chat con un'opera: risponde e propone nuova chat
                 addBotMessage(data.response);
-                const otherArtworks = extraArtworks.filter(o => o !== currentArtwork);
-                if (otherArtworks.length > 0) {
-                    offerNewChat(otherArtworks);
+                // includi anche newArtwork se diverso da currentArtwork
+                const allOtherArtworks = [...new Set(
+                    [newArtwork, ...extraArtworks].filter(o => o !== currentArtwork)
+                )];
+                if (allOtherArtworks.length > 0) {
+                    offerNewChat(allOtherArtworks);
                 }
                 // aggiorna cronologia senza cambiare opera corrente
                 conversationHistory.push({ role: 'user', content: text || '[Immagine caricata - opera riconosciuta: ' + newArtwork + ']' });
@@ -229,12 +232,15 @@ function offerNewChat(artworks) {
     const div = document.createElement('div');
     div.className = 'message bot-message';
     let btns = artworks.map(a =>
-        `<button class="new-chat-btn" onclick="openNewChat('${a.replace(/'/g, "\\'")}')"">Apri una chat su ${a}</button>`
+        `<button class="new-chat-btn" onclick="openNewChat('${a.replace(/'/g, "\\'")}')">Apri una chat su ${a}</button>`
     ).join('');
+    const label = artworks.length > 1
+        ? 'Ho rilevato altre opere. Vuoi aprire una nuova chat?'
+        : "Ho rilevato un'altra opera. Vuoi aprire una nuova chat?";
     div.innerHTML = `
         <div class="message-avatar">🤖</div>
         <div class="message-content">
-            <p>Ho rilevato un'altra opera. Vuoi aprire una nuova chat?</p>
+            <p>${label}</p>
             <div style="margin-top:8px;">${btns}</div>
         </div>
     `;

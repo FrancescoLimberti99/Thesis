@@ -186,6 +186,10 @@ def chat(request):
         quoted_artworks = ', '.join([artwork_name] + extra_artworks)
         prompt = (
             f"Opere citate: {quoted_artworks}\n"
+            f"Autore: {artwork.author}\n"
+            f"Epoca: {artwork.period}\n"
+            f"Stile: {artwork.style}\n"
+            f"Località: {artwork.location}\n"
             f"Contesto {artwork_name}: {context}{extra_context}\n"
             f"{history_text}\n"
             f"{'Immagine: vedi immagine allegata.\n' if input_image else ''}"
@@ -195,6 +199,10 @@ def chat(request):
     else:
         prompt = (
             f"Opera: {artwork_name}\n"
+            f"Autore: {artwork.author}\n"
+            f"Epoca: {artwork.period}\n"
+            f"Stile: {artwork.style}\n"
+            f"Località: {artwork.location}\n"
             f"Contesto storico: {context}\n"
             f"{history_text}\n"
             f"{'Immagine: vedi immagine allegata.\n' if input_image else ''}"

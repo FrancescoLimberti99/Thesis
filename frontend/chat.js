@@ -142,6 +142,20 @@ async function sendToBackend(text, imageFile) {
         hideTypingIndicator();
 
         if (response.ok) {
+            if (data.metadata_match) {
+                const campoLabel = {
+                    'autore': "dell'autore",
+                    'epoca': "dell'epoca",
+                    'stile': "dello stile",
+                    'localita': "della località",
+                }[data.campo] || 'del campo';
+                const msg = data.opere.length === 1
+                    ? `Ho trovato 1 opera ${campoLabel} "${data.valore}". Vuoi saperne di più?`
+                    : `Ho trovato ${data.opere.length} opere ${campoLabel} "${data.valore}". Selezionane una:`;
+                addBotMessage(msg);
+                offerMetadataResults(data.opere);
+                return;
+            }
             const newArtwork = data.artwork;
             const extraArtworks = data.extra_artworks || [];
 
@@ -225,6 +239,23 @@ function selectArtwork(artworkName) {
     updateCulturalCard(artworkName, null);
     addBotMessage(`Perfetto! Parliamo di ${artworkName}. Cosa vuoi sapere?`);
     conversationHistory.push({ role: 'assistant', content: `Parliamo di ${artworkName}. Cosa vuoi sapere?` });
+}
+
+// OFFRI RISULTATI METADATA (autore/epoca/stile/località)
+function offerMetadataResults(opere) {
+    const div = document.createElement('div');
+    div.className = 'message bot-message';
+    const btns = opere.map(a =>
+        `<button class="artwork-choice-btn" onclick="openNewChat('${a.replace(/'/g, "\\'")}')">${a}</button>`
+    ).join('');
+    div.innerHTML = `
+        <div class="message-avatar">🤖</div>
+        <div class="message-content">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">${btns}</div>
+        </div>
+    `;
+    chatMessages.appendChild(div);
+    scrollToBottom();
 }
 
 // OFFRI NUOVA CHAT

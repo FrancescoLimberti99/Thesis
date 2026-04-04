@@ -126,7 +126,7 @@ def chat(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-# casistica: immagine (ha priorità sul testo)
+    # casistica: immagine (ha priorità sul testo)
     if input_image:
         embedding = generate_embedding(input_image)
         results = vector_db.search(embedding, top_k=1)
@@ -143,6 +143,22 @@ def chat(request):
         if not all_detected and current_artwork:
             all_detected = [current_artwork]
         if not all_detected:
+            # fallback: ricerca per metadati (autore, epoca, stile, località)
+            meta_result = detector.detect_by_metadata(input_text)
+            if meta_result:
+                campo_label = {
+                    'autore': "dell'autore",
+                    'epoca': "dell'epoca",
+                    'stile': "dello stile",
+                    'localita': "della località",
+                }.get(meta_result['campo'], 'del campo')
+                return Response({
+                    'metadata_match': True,
+                    'opere': meta_result['opere'],
+                    'campo': meta_result['campo'],
+                    'valore': meta_result['valore'],
+                    'campo_label': campo_label,
+                })
             return Response({'response': 'Opera non riconosciuta nel testo. Prova a scrivere il titolo correttamente.'})
         artwork_name = all_detected[0]
         extra_artworks = all_detected[1:]

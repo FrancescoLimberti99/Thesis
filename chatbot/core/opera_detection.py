@@ -61,6 +61,30 @@ class OperaDetector:
             print(f"   Impossibile caricare alias dal database: {e}")
 
         return aliases
+    
+    def _load_metadata(self) -> List[Dict]:
+        """
+        Carica i metadati di tutte le opere dal database Django.
+        Usato per il rilevamento per metadati come fallback.
+
+        Returns:
+            Lista di dict con campi: nome, autore, epoca, stile, localita
+        """
+        metadata = []
+        try:
+            from django.apps import apps
+            Artwork = apps.get_model('chatbot', 'Artwork')
+            for artwork in Artwork.objects.all():
+                metadata.append({
+                    'nome': artwork.name,
+                    'autore': (artwork.author or '').lower(),
+                    'epoca': (artwork.period or '').lower(),
+                    'stile': (artwork.style or '').lower(),
+                    'localita': (artwork.location or '').lower(),
+                })
+        except Exception as e:
+            print(f"   Impossibile caricare metadata dal database: {e}")
+        return metadata
 
     def reload(self):
         """
@@ -222,3 +246,88 @@ class OperaDetector:
         if entries:
             return entries[0]
         return None
+    
+    def detect_by_metadata(self, user_message: str) -> Dict:
+        """
+        Fallback: cerca opere per metadati chiamato solo se non vengono trovati titoli/alias.
+
+        Priorità dei campi: autore > epoca > stile > località
+        Usa match esatto su sottostringhe + fuzzy matching.
+
+        Args:
+            user_message: Testo scritto dall'utente
+
+        Returns:
+            Dict con:
+            - 'opere': lista di nomi opere trovate
+            - 'campo': il campo che ha fatto match ('autore','epoca','stile','localita')
+            - 'valore': il valore del campo trovato nel messaggio
+            oppure dict vuoto {} se nessun match
+        """
+        message_lower = user_message.lower()
+        artworks_meta = self._load_metadata()
+
+        # ordine di priorità dei campi
+        campi_priorita = ['autore', 'epoca', 'stile', 'localita']
+
+        # --- STEP 1: match esatto su sottostringhe e per token ---
+        for campo in campi_priorita:
+            valori_unici = list({
+                m[campo] for m in artworks_meta if m[campo]
+            })
+            for valore in valori_unici:
+                if not valore:
+                    continue
+                # match 1a: la stringa intera è contenuta nel messaggio
+                match_intero = valore in message_lower
+
+                # match 1b: ogni token del valore è contenuto nel messaggio
+                token_valore = [t for t in valore.split() if len(t) >= 4]
+                match_token = token_valore and all(t in message_lower for t in token_valore)
+
+                if match_intero or match_token:
+                    opere_trovate = [
+                        m['nome'] for m in artworks_meta
+                        if m[campo] == valore
+                    ]
+                    if opere_trovate:
+                        return {
+                            'opere': opere_trovate,
+                            'campo': campo,
+                            'valore': valore,
+                        }
+
+        # --- STEP 2: fuzzy matching su parole, bigram, trigram ---
+        all_words_raw = re.findall(r'\b\w+\b', message_lower)
+        candidates = [w for w in all_words_raw if len(w) >= 4]
+        candidates += [
+            f"{all_words_raw[i]} {all_words_raw[i+1]}"
+            for i in range(len(all_words_raw) - 1)
+        ]
+        candidates += [
+            f"{all_words_raw[i]} {all_words_raw[i+1]} {all_words_raw[i+2]}"
+            for i in range(len(all_words_raw) - 2)
+        ]
+
+        for campo in campi_priorita:
+            valori_unici = list({
+                m[campo] for m in artworks_meta if m[campo]
+            })
+            if not valori_unici:
+                continue
+            for candidate in candidates:
+                matches = get_close_matches(candidate, valori_unici, n=1, cutoff=0.80)
+                if matches:
+                    valore_matched = matches[0]
+                    opere_trovate = [
+                        m['nome'] for m in artworks_meta
+                        if m[campo] == valore_matched
+                    ]
+                    if opere_trovate:
+                        return {
+                            'opere': opere_trovate,
+                            'campo': campo,
+                            'valore': valore_matched,
+                        }
+
+        return {}

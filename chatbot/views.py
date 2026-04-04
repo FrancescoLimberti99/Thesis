@@ -25,92 +25,148 @@ vector_db.load(VECTOR_DB_PATH)
 # istanzia opera detector all'avvio
 detector = OperaDetector(vector_db)
 
+def _parse_runpod_output(output):
+    import re
+
+    if output is None:
+        raise Exception("RunPod ha restituito output=None")
+
+    print("OUTPUT RAW:", output)
+
+    if isinstance(output, list):
+        output = output[0]
+
+    for key in ('text', 'generated_text'):
+        if key in output and isinstance(output[key], str):
+            text = output[key].strip()
+            text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+            return text
+
+    choices = output.get('choices')
+    if choices:
+        choice = choices[0]
+
+        if 'message' in choice:
+            content = choice['message'].get('content', '')
+            if isinstance(content, list):
+                content = ' '.join(
+                    block.get('text', '') for block in content
+                    if block.get('type') == 'text'
+                )
+            content = content.strip()
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+            return content
+
+        if 'text' in choice:
+            text = choice['text'].strip()
+            text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+            return text
+
+        if 'tokens' in choice:
+            return ''.join(choice['tokens']).strip()
+
+    raise Exception(f"Formato output RunPod non riconosciuto: {output}")
+
+
 def call_runpod(prompt, image_base64=None):
     import time
-    api_key = os.getenv('RUNPOD_API_KEY')
+
+    api_key     = os.getenv('RUNPOD_API_KEY')
     endpoint_id = os.getenv('RUNPOD_ENDPOINT_ID')
+    max_wait    = int(os.getenv('RUNPOD_TIMEOUT', 600))
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
 
+    if image_base64:
+        user_content = [
+            {"type": "image_url",
+             "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}},
+            {"type": "text", "text": prompt}
+        ]
+    else:
+        user_content = prompt
+
     messages = [
         {
             "role": "system",
-            "content": "Sei una guida museale esperta. Rispondi SEMPRE e SOLO in italiano. Vai direttamente alla risposta senza preamboli. Non usare markdown, asterischi, grassetto o corsivo. Scrivi in testo semplice."
+            "content": (
+                "Sei una guida museale esperta. "
+                "Rispondi SEMPRE e SOLO in italiano. "
+                "Vai direttamente alla risposta senza preamboli. "
+                "Non usare markdown, asterischi, grassetto o corsivo. "
+                "Scrivi in testo semplice."
+            )
         },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "image": f"data:image/jpeg;base64,{image_base64}"
-                },
-                {
-                    "type": "text",
-                    "text": prompt
-                }
-            ] if image_base64 else prompt
-        }
+        {"role": "user", "content": user_content}
     ]
 
     payload = {
         "input": {
             "messages": messages,
             "sampling_params": {
-                "max_tokens": 4096,
-                "temperature": 0.7
+                "max_tokens": 2048,
+                "temperature": 0.7,
+                "skip_special_tokens": True,
             }
         }
     }
 
-    # invia il job asincrono
     response = requests.post(
         f"https://api.runpod.ai/v2/{endpoint_id}/run",
         headers=headers,
         json=payload,
         timeout=30
     )
+    response.raise_for_status()
     result = response.json()
     job_id = result.get('id')
-    print("JOB AVVIATO:", job_id)
+    print(f"JOB AVVIATO: {job_id}")
 
     if not job_id:
         raise Exception(f"RunPod non ha restituito un job ID: {result}")
 
-    # polling finché il job non è completato
-    for attempt in range(120):
-        time.sleep(2)
-        status_response = requests.get(
-            f"https://api.runpod.ai/v2/{endpoint_id}/status/{job_id}",
-            headers=headers,
-            timeout=30
-        )
-        status_result = status_response.json()
+    elapsed       = 0
+    poll_interval = 2
+    max_interval  = 10
+    attempt       = 0
+
+    while elapsed < max_wait:
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+
+        try:
+            status_response = requests.get(
+                f"https://api.runpod.ai/v2/{endpoint_id}/status/{job_id}",
+                headers=headers,
+                timeout=30
+            )
+            status_response.raise_for_status()
+            status_result = status_response.json()
+        except requests.RequestException as e:
+            print(f"Polling #{attempt + 1} — errore HTTP: {e}, riprovo...")
+            attempt += 1
+            continue
+
         job_status = status_result.get('status')
-        print(f"Polling #{attempt + 1} — status: {job_status}")
+        attempt   += 1
+        print(f"Polling #{attempt} ({elapsed}s/{max_wait}s) — status: {job_status}")
 
         if job_status == 'COMPLETED':
-            output = status_result.get('output')
-            print("OUTPUT COMPLETO:", output)
-            if isinstance(output, list):
-                choices = output[0].get('choices', [])
-            else:
-                choices = output.get('choices', [])
-            choice = choices[0]
-            if 'text' in choice:
-                return choice['text'].strip()
-            elif 'message' in choice:
-                return choice['message']['content'].strip()
-            elif 'tokens' in choice:
-                return ''.join(choice['tokens']).strip()
-            else:
-                raise Exception(f"Formato output non riconosciuto: {choice}")
+            return _parse_runpod_output(status_result.get('output'))
 
-        elif job_status == 'FAILED':
-            raise Exception(f"Job RunPod fallito: {status_result.get('error')}")
+        if job_status == 'FAILED':
+            error_detail = status_result.get('error') or status_result
+            raise Exception(f"Job RunPod fallito: {error_detail}")
 
-    raise Exception("Timeout: RunPod non ha completato il job entro il tempo massimo.")
+        poll_interval = min(poll_interval + 2, max_interval)
+
+    raise Exception(
+        f"Timeout: RunPod non ha completato il job entro {max_wait} secondi "
+        f"(job_id={job_id}). Aumenta RUNPOD_TIMEOUT nel file .env."
+    )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

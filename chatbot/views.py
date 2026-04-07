@@ -224,6 +224,7 @@ def chat(request):
     try:
         artwork = Artwork.objects.get(name=artwork_name)
         context = artwork.context
+        #context = "" #per il test senza contesto
     except Artwork.DoesNotExist:
         context = ""
 
@@ -267,6 +268,7 @@ def chat(request):
             f"{'Immagine: vedi immagine allegata.\n' if input_image else ''}"
             f"Domanda: {domanda}\n\n"
             f"Rispondi alla domanda usando i contesti forniti e la tua conoscenza generale. /no_think"
+            #f"Rispondi alla domanda usando la tua conoscenza generale. /no_think" #per test senza contesto
         )
     else:
         prompt = (
@@ -279,7 +281,8 @@ def chat(request):
             f"{history_text}\n"
             f"{'Immagine: vedi immagine allegata.\n' if input_image else ''}"
             f"Domanda: {domanda}\n\n"
-            f"Fornisci una risposta dettagliata basandoti sul contesto fornito. /no_think"
+            f"Fornisci una risposta dettagliata basandoti sul contesto fornito e sulla tua conoscenza generale. /no_think"
+            #f"Fornisci una risposta dettagliata basandoti sulla tua conoscenza generale. /no_think" #per test senza contesto
         )
 
     try:

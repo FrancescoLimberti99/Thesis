@@ -164,8 +164,20 @@ async function openEditModal(id) {
     document.getElementById('modalOverlay').classList.add('active');
 }
 
-document.getElementById('cancelEditBtn').addEventListener('click', () => {
+function closeEditModal() {
     document.getElementById('modalOverlay').classList.remove('active');
+    ['editName', 'editAuthor', 'editPeriod', 'editLocation', 'editStyle', 'editContext', 'editAliases'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    document.getElementById('editImages').value = '';
+    document.getElementById('editCurrentImages').innerHTML = '';
+    document.getElementById('editFeedbackMsg').textContent = '';
+}
+
+document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modalOverlay')) closeEditModal();
 });
 
 document.getElementById('saveEditBtn').addEventListener('click', async () => {
@@ -196,9 +208,7 @@ document.getElementById('saveEditBtn').addEventListener('click', async () => {
             feedbackMsg.className = 'feedback-msg success';
             feedbackMsg.textContent = 'Opera modificata con successo!';
             loadArtworks();
-            setTimeout(() => {
-                document.getElementById('modalOverlay').classList.remove('active');
-            }, 1000);
+            setTimeout(closeEditModal, 1000);
         } else {
             feedbackMsg.className = 'feedback-msg error';
             feedbackMsg.textContent = 'Errore nella modifica.';
